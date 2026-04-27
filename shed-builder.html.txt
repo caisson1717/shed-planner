@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shed Layout Planner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0ece4;
+    --panel: #1a1a18;
+    --panel-border: #2e2e2a;
+    --ink: #1a1a18;
+    --ink-muted: #6b6b60;
+    --accent: #c8622a;
+    --accent2: #4a7c59;
+    --pool: #3b82c4;
+    --shed: #c8622a;
+    --porch: #a0784a;
+    --grid: rgba(26,26,24,0.07);
+    --rule: rgba(26,26,24,0.15);
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  header {
+    background: var(--panel);
+    color: #f0ece4;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid var(--panel-border);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f0ece4;
+  }
+
+  header .phase {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(200,98,42,0.15);
+    padding: 3px 8px;
+    border-radius: 2px;
+    border: 1px solid rgba(200,98,42,0.3);
+  }
+
+  header .spacer { flex: 1; }
+
+  header .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: #8a8a80;
+    border: 1px solid #3a3a36;
+  }
+  .btn-ghost:hover { color: #f0ece4; border-color: #5a5a56; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #b5571f; }
+
+  .btn-danger {
+    background: transparent;
+    color: #e05a5a;
+    border: 1px solid #4a2a2a;
+  }
+  .btn-danger:hover { background: rgba(224,90,90,0.1); }
+
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .toolbar {
+    width: 200px;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px;
+    gap: 6px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .toolbar-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #4a4a46;
+    padding: 8px 4px 4px;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #9a9a90;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: left;
+    transition: all 0.12s;
+  }
+
+  .tool-btn:hover { background: #252522; color: #f0ece4; border-color: #3a3a36; }
+
+  .tool-btn .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .dot-pool { background: var(--pool); }
+  .dot-shed { background: var(--shed); }
+  .dot-porch { background: var(--porch); }
+  .dot-fence { background: transparent; border: 2px dashed #7a7a70; }
+  .dot-prop { background: transparent; border: 2px solid #5a5a50; }
+
+  .divider {
+    height: 1px;
+    background: var(--panel-border);
+    margin: 8px 0;
+  }
+
+  .props {
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .prop-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .prop-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #5a5a56;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .prop-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #c8c8b8;
+    background: #252522;
+    border: 1px solid #3a3a36;
+    border-radius: 2px;
+    padding: 4px 8px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.12s;
+  }
+  .prop-value:focus { border-color: var(--accent); color: #f0ece4; }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  #mainCanvas {
+    display: block;
+    cursor: default;
+  }
+
+  .infobar {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26,26,24,0.85);
+    color: #9a9a90;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .legend {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(26,26,24,0.88);
+    border: 1px solid #3a3a36;
+    border-radius: 4px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .legend-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #4a4a46;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 2px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #8a8a80;
+  }
+
+  .legend-swatch {
+    width: 16px;
+    height: 10px;
+    border-radius: 1px;
+  }
+
+  .scale-indicator {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(26,26,24,0.88);
+    border: 1px solid #3a3a36;
+    border-radius: 4px;
+    padding: 8px 12px;
+    pointer-events: none;
+  }
+
+  .scale-bar-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #6a6a60;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .scale-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .scale-line {
+    width: 80px;
+    height: 6px;
+    border: 1.5px solid #7a7a70;
+    border-top: none;
+    position: relative;
+  }
+
+  .scale-line::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    height: 4px;
+    width: 1.5px;
+    background: #7a7a70;
+  }
+
+  .scale-line::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: 0;
+    height: 4px;
+    width: 1.5px;
+    background: #7a7a70;
+  }
+
+  .scale-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #8a8a80;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Shed Layout Planner</h1>
+  <span class="phase">Phase 1 — Rough Layout</span>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" onclick="resetView()">Reset View</button>
+  <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+  <button class="btn btn-primary" onclick="saveLayout()">Save</button>
+</header>
+
+<div class="workspace">
+  <div class="toolbar">
+    <div class="toolbar-label">Add Elements</div>
+    <button class="tool-btn" onclick="addShape('pool')">
+      <span class="dot dot-pool"></span> Pool
+    </button>
+    <button class="tool-btn" onclick="addShape('shed')">
+      <span class="dot dot-shed"></span> Shed
+    </button>
+    <button class="tool-btn" onclick="addShape('porch')">
+      <span class="dot dot-porch"></span> Porch
+    </button>
+    <button class="tool-btn" onclick="addShape('fence')">
+      <span class="dot dot-fence"></span> Fence Line
+    </button>
+    <button class="tool-btn" onclick="addShape('property')">
+      <span class="dot dot-prop"></span> Property Edge
+    </button>
+
+    <div class="divider"></div>
+    <div class="toolbar-label">Selected</div>
+    <div class="props" id="propsPanel">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4a4a46;padding:4px;">
+        Click a shape to edit
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="toolbar-label">Controls</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#4a4a46;line-height:1.8;padding:0 4px;">
+      Drag — move<br>
+      Corner handle — resize<br>
+      ⟳ handle — rotate<br>
+      Del / Backspace — delete<br>
+      Scroll — zoom<br>
+      Middle drag — pan
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-danger" style="margin-top:4px;" onclick="deleteSelected()">Delete Selected</button>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="mainCanvas"></canvas>
+
+    <div class="legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#3b82c4;"></span> Pool</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#c8622a;"></span> Shed</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:#a0784a;"></span> Porch</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px dashed #7a7a70;"></span> Fence</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:transparent;border:1.5px solid #5a5a50;"></span> Property</div>
+    </div>
+
+    <div class="scale-indicator">
+      <div class="scale-bar-label">Scale (approx)</div>
+      <div class="scale-bar">
+        <div class="scale-line"></div>
+        <div class="scale-text" id="scaleText">10 ft</div>
+      </div>
+    </div>
+
+    <div class="infobar" id="infoBar">Click "Add Elements" to place shapes on the canvas</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = canvas.parentElement;
+
+let shapes = [];
+let selectedId = null;
+let dragState = null;
+let viewOX = 0, viewOY = 0;
+let viewScale = 1;
+let nextId = 1;
+
+const PX_PER_FT = 8;
+
+const DEFAULTS = {
+  pool:     { w: 20, h: 40, label: 'Pool',          color: '#3b82c4', alpha: 0.45 },
+  shed:     { w: 16, h: 20, label: 'Shed',          color: '#c8622a', alpha: 0.50 },
+  porch:    { w: 12, h: 10, label: 'Covered Porch', color: '#a0784a', alpha: 0.45 },
+  fence:    { w: 40, h: 2,  label: 'Fence Line',    color: '#7a7a70', alpha: 0.6, dashed: true },
+  property: { w: 60, h: 60, label: 'Property Edge', color: '#5a5a50', alpha: 0.3, outline: true },
+};
+
+function resize() {
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  if (viewOX === 0 && viewOY === 0) {
+    viewOX = canvas.width / 2;
+    viewOY = canvas.height / 2;
+  }
+  draw();
+  updateScaleBar();
+}
+
+function updateScaleBar() {
+  const ft = Math.round(80 / (PX_PER_FT * viewScale));
+  document.getElementById('scaleText').textContent = ft + ' ft';
+}
+
+function toScreen(wx, wy) {
+  return { x: wx * PX_PER_FT * viewScale + viewOX, y: wy * PX_PER_FT * viewScale + viewOY };
+}
+function toWorld(sx, sy) {
+  return { x: (sx - viewOX) / (PX_PER_FT * viewScale), y: (sy - viewOY) / (PX_PER_FT * viewScale) };
+}
+function wLen(px) { return px / (PX_PER_FT * viewScale); }
+function sLen(ft) { return ft * PX_PER_FT * viewScale; }
+
+function addShape(type) {
+  const def = DEFAULTS[type];
+  const center = toWorld(canvas.width / 2, canvas.height / 2);
+  const id = nextId++;
+  shapes.push({
+    id, type,
+    x: center.x - def.w / 2,
+    y: center.y - def.h / 2,
+    w: def.w, h: def.h, rot: 0,
+    label: def.label, color: def.color, alpha: def.alpha,
+    dashed: def.dashed || false, outline: def.outline || false,
+  });
+  selectedId = id;
+  draw();
+  updateProps();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawNorthArrow();
+  shapes.forEach(s => drawShape(s));
+  if (selectedId) drawHandles(getShape(selectedId));
+}
+
+function drawGrid() {
+  const step = sLen(5);
+  const ox = ((viewOX % step) + step) % step;
+  const oy = ((viewOY % step) + step) % step;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(26,26,24,0.06)';
+  ctx.lineWidth = 1;
+  for (let x = ox; x < canvas.width; x += step) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (let y = oy; y < canvas.height; y += step) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  const step2 = sLen(20);
+  const ox2 = ((viewOX % step2) + step2) % step2;
+  const oy2 = ((viewOY % step2) + step2) % step2;
+  ctx.strokeStyle = 'rgba(26,26,24,0.12)';
+  for (let x = ox2; x < canvas.width; x += step2) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (let y = oy2; y < canvas.height; y += step2) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawNorthArrow() {
+  const x = 40, y = canvas.height - 50;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.arc(0,0,20,0,Math.PI*2);
+  ctx.fillStyle = 'rgba(26,26,24,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(26,26,24,0.2)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0,-14); ctx.lineTo(5,5); ctx.lineTo(0,1); ctx.lineTo(-5,5);
+  ctx.closePath();
+  ctx.fillStyle = '#c8622a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0,14); ctx.lineTo(4,-2); ctx.lineTo(0,2); ctx.lineTo(-4,-2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(26,26,24,0.25)';
+  ctx.fill();
+  ctx.font = "bold 9px 'JetBrains Mono', monospace";
+  ctx.fillStyle = '#1a1a18';
+  ctx.textAlign = 'center';
+  ctx.fillText('N', 0, -20);
+  ctx.restore();
+}
+
+function drawShape(s) {
+  const sp = toScreen(s.x, s.y);
+  const sw = sLen(s.w), sh = sLen(s.h);
+  ctx.save();
+  ctx.translate(sp.x + sw/2, sp.y + sh/2);
+  ctx.rotate(s.rot);
+  const isSelected = s.id === selectedId;
+
+  if (s.outline) {
+    ctx.beginPath(); ctx.rect(-sw/2,-sh/2,sw,sh);
+    ctx.strokeStyle = s.color; ctx.lineWidth = isSelected ? 2 : 1.5;
+    ctx.setLineDash([8,5]); ctx.globalAlpha = s.alpha*1.5; ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (s.dashed) {
+    ctx.beginPath(); ctx.rect(-sw/2,-sh/2,sw,sh);
+    ctx.fillStyle = s.color; ctx.globalAlpha = 0.08; ctx.fill();
+    ctx.globalAlpha = s.alpha; ctx.strokeStyle = s.color;
+    ctx.lineWidth = isSelected ? 2.5 : 1.5;
+    ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+  } else {
+    ctx.beginPath(); ctx.rect(-sw/2,-sh/2,sw,sh);
+    ctx.fillStyle = s.color; ctx.globalAlpha = s.alpha; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = isSelected ? '#f0ece4' : darken(s.color);
+    ctx.lineWidth = isSelected ? 2.5 : 1.5; ctx.stroke();
+    if (s.type === 'porch') drawHatch(-sw/2,-sh/2,sw,sh);
+  }
+
+  ctx.globalAlpha = 1;
+  const labelSize = Math.max(10, Math.min(14, sw/8));
+  ctx.font = `600 ${labelSize}px 'Sora', sans-serif`;
+  ctx.fillStyle = (s.type === 'property' || s.type === 'fence') ? s.color : '#fff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  if (sw > 40 && sh > 24) {
+    ctx.fillText(s.label, 0, -labelSize*0.6);
+    ctx.font = `400 ${Math.max(9,labelSize-2)}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = (s.type === 'property' || s.type === 'fence') ? s.color : 'rgba(255,255,255,0.75)';
+    ctx.fillText(`${Math.round(s.w)}' × ${Math.round(s.h)}'`, 0, labelSize*0.8);
+  } else if (sw > 20) {
+    ctx.fillText(s.label, 0, 0);
+  }
+  ctx.restore();
+}
+
+function drawHatch(x, y, w, h) {
+  ctx.save();
+  ctx.globalAlpha = 0.12; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = -h; i < w+h; i += 12) {
+    ctx.moveTo(x+i, y); ctx.lineTo(x+i-h, y+h);
+  }
+  ctx.stroke(); ctx.restore();
+}
+
+function darken(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.floor(r*0.6)},${Math.floor(g*0.6)},${Math.floor(b*0.6)})`;
+}
+
+const HANDLE_R = 6;
+
+function getHandles(s) {
+  const sp = toScreen(s.x, s.y);
+  const sw = sLen(s.w), sh = sLen(s.h);
+  const cx = sp.x + sw/2, cy = sp.y + sh/2;
+  const cos = Math.cos(s.rot), sin = Math.sin(s.rot);
+  function rotPt(lx,ly) { return { x: cx+lx*cos-ly*sin, y: cy+lx*sin+ly*cos }; }
+  return {
+    nw: rotPt(-sw/2,-sh/2), ne: rotPt(sw/2,-sh/2),
+    se: rotPt(sw/2,sh/2),   sw: rotPt(-sw/2,sh/2),
+    rot: rotPt(0,-sh/2-20),
+  };
+}
+
+function drawHandles(s) {
+  if (!s) return;
+  const h = getHandles(s);
+  ctx.save();
+  ['nw','ne','se','sw'].forEach(k => {
+    ctx.beginPath(); ctx.arc(h[k].x,h[k].y,HANDLE_R,0,Math.PI*2);
+    ctx.fillStyle = '#f0ece4'; ctx.fill();
+    ctx.strokeStyle = '#c8622a'; ctx.lineWidth = 2; ctx.stroke();
+  });
+  ctx.beginPath(); ctx.arc(h.rot.x,h.rot.y,HANDLE_R,0,Math.PI*2);
+  ctx.fillStyle = '#4a7c59'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.setLineDash([3,3]);
+  ctx.strokeStyle = 'rgba(74,124,89,0.5)'; ctx.lineWidth = 1;
+  ctx.moveTo(h.ne.x+(h.nw.x-h.ne.x)/2, h.ne.y+(h.nw.y-h.ne.y)/2);
+  ctx.lineTo(h.rot.x, h.rot.y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function hitTest(sx, sy) {
+  for (let i = shapes.length-1; i >= 0; i--) {
+    const result = hitTestShape(shapes[i], sx, sy);
+    if (result) return { shape: shapes[i], hit: result };
+  }
+  return null;
+}
+
+function hitTestShape(s, sx, sy) {
+  const sp = toScreen(s.x, s.y);
+  const sw = sLen(s.w), sh = sLen(s.h);
+  const cx = sp.x+sw/2, cy = sp.y+sh/2;
+  const dx = sx-cx, dy = sy-cy;
+  const cos = Math.cos(-s.rot), sin = Math.sin(-s.rot);
+  const lx = dx*cos-dy*sin, ly = dx*sin+dy*cos;
+  const h = getHandles(s);
+  if (Math.hypot(sx-h.rot.x,sy-h.rot.y) <= HANDLE_R+3) return 'rot';
+  const corners = [
+    {k:'nw',lx:-sw/2,ly:-sh/2},{k:'ne',lx:sw/2,ly:-sh/2},
+    {k:'se',lx:sw/2,ly:sh/2}, {k:'sw',lx:-sw/2,ly:sh/2},
+  ];
+  for (const c of corners) {
+    if (Math.hypot(lx-c.lx,ly-c.ly) <= HANDLE_R+4) return c.k;
+  }
+  if (Math.abs(lx) <= sw/2 && Math.abs(ly) <= sh/2) return 'body';
+  return null;
+}
+
+function getShape(id) { return shapes.find(s => s.id === id); }
+
+let isPanning = false, panStart = null;
+
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX-rect.left, sy = e.clientY-rect.top;
+  if (e.button === 1) {
+    isPanning = true; panStart = {x:sx,y:sy,ox:viewOX,oy:viewOY};
+    e.preventDefault(); return;
+  }
+  if (e.button === 0) {
+    const hit = selectedId ? hitTestShape(getShape(selectedId),sx,sy) : null;
+    if (hit && hit !== 'body') {
+      const s = getShape(selectedId);
+      dragState = {
+        type: hit==='rot' ? 'rotate' : 'resize',
+        corner: hit, startSX:sx, startSY:sy,
+        startRot:s.rot, startX:s.x, startY:s.y, startW:s.w, startH:s.h,
+        cx: toScreen(s.x,s.y).x+sLen(s.w)/2,
+        cy: toScreen(s.x,s.y).y+sLen(s.h)/2,
+      };
+    } else {
+      const result = hitTest(sx,sy);
+      if (result) {
+        selectedId = result.shape.id;
+        if (result.hit === 'body') {
+          dragState = {type:'move',startSX:sx,startSY:sy,startX:result.shape.x,startY:result.shape.y};
+        }
+      } else { selectedId = null; dragState = null; }
+      updateProps(); draw();
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX-rect.left, sy = e.clientY-rect.top;
+  if (isPanning && panStart) {
+    viewOX = panStart.ox+(sx-panStart.x);
+    viewOY = panStart.oy+(sy-panStart.y);
+    draw(); updateScaleBar(); return;
+  }
+  if (dragState) {
+    const s = getShape(selectedId); if (!s) return;
+    if (dragState.type === 'move') {
+      s.x = dragState.startX + wLen(sx-dragState.startSX);
+      s.y = dragState.startY + wLen(sy-dragState.startSY);
+    } else if (dragState.type === 'rotate') {
+      s.rot = Math.atan2(sy-dragState.cy, sx-dragState.cx) + Math.PI/2;
+    } else if (dragState.type === 'resize') {
+      const dx = sx-dragState.startSX, dy = sy-dragState.startSY;
+      const cos = Math.cos(-s.rot), sin = Math.sin(-s.rot);
+      const ldx = wLen(dx*cos-dy*sin), ldy = wLen(dx*sin+dy*cos);
+      const minFt = wLen(20);
+      const corner = dragState.corner;
+      let nW=dragState.startW, nH=dragState.startH, nX=dragState.startX, nY=dragState.startY;
+      if (corner==='se') { nW=Math.max(minFt,dragState.startW+ldx); nH=Math.max(minFt,dragState.startH+ldy); }
+      else if (corner==='nw') {
+        const dw=Math.min(dragState.startW-minFt,ldx), dh=Math.min(dragState.startH-minFt,ldy);
+        nW=dragState.startW-dw; nH=dragState.startH-dh;
+        nX=dragState.startX+dw*Math.cos(s.rot)-dh*Math.sin(s.rot);
+        nY=dragState.startY+dw*Math.sin(s.rot)+dh*Math.cos(s.rot);
+      } else if (corner==='ne') {
+        nW=Math.max(minFt,dragState.startW+ldx);
+        const dh=Math.min(dragState.startH-minFt,ldy); nH=dragState.startH-dh;
+        nX=dragState.startX-dh*Math.sin(s.rot); nY=dragState.startY+dh*Math.cos(s.rot);
+      } else if (corner==='sw') {
+        const dw=Math.min(dragState.startW-minFt,ldx); nW=dragState.startW-dw;
+        nH=Math.max(minFt,dragState.startH+ldy);
+        nX=dragState.startX+dw*Math.cos(s.rot); nY=dragState.startY+dw*Math.sin(s.rot);
+      }
+      s.w=nW; s.h=nH; s.x=nX; s.y=nY;
+    }
+    draw(); updateProps(); updateInfo(s);
+  } else {
+    const result = hitTest(sx,sy);
+    if (result) {
+      if (result.hit==='rot') canvas.style.cursor='crosshair';
+      else if (result.hit==='body') canvas.style.cursor='grab';
+      else canvas.style.cursor='nwse-resize';
+    } else { canvas.style.cursor='default'; }
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (isPanning) { isPanning=false; panStart=null; return; }
+  if (dragState) { dragState=null; saveLayout(); updateProps(); }
+  canvas.style.cursor='default';
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+  const zf = e.deltaY < 0 ? 1.12 : 0.89;
+  const ns = Math.max(0.1, Math.min(8, viewScale*zf));
+  viewOX = mx-(mx-viewOX)*(ns/viewScale);
+  viewOY = my-(my-viewOY)*(ns/viewScale);
+  viewScale = ns; draw(); updateScaleBar();
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if ((e.key==='Delete'||e.key==='Backspace') && selectedId) {
+    if (document.activeElement.tagName==='INPUT') return;
+    deleteSelected();
+  }
+  if (e.key==='Escape') { selectedId=null; updateProps(); draw(); }
+});
+
+function deleteSelected() {
+  if (!selectedId) return;
+  shapes = shapes.filter(s => s.id !== selectedId);
+  selectedId = null; updateProps(); draw(); saveLayout();
+}
+
+function updateInfo(s) {
+  if (!s) { document.getElementById('infoBar').textContent='Click "Add Elements" to place shapes'; return; }
+  document.getElementById('infoBar').textContent =
+    `${s.label}  |  ${Math.round(s.w)}' × ${Math.round(s.h)}'  |  Area: ${Math.round(s.w*s.h)} sq ft  |  Rotation: ${Math.round(s.rot*180/Math.PI)}°`;
+}
+
+function updateProps() {
+  const panel = document.getElementById('propsPanel');
+  const s = selectedId ? getShape(selectedId) : null;
+  if (!s) {
+    panel.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#4a4a46;padding:4px;">Click a shape to edit</div>';
+    document.getElementById('infoBar').textContent='Click "Add Elements" to place shapes on the canvas';
+    return;
+  }
+  updateInfo(s);
+  panel.innerHTML=`
+    <div class="prop-row">
+      <div class="prop-label">Label</div>
+      <input class="prop-value" type="text" value="${s.label}" onchange="setProp(${s.id},'label',this.value)">
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Width (ft)</div>
+      <input class="prop-value" type="number" value="${Math.round(s.w)}" min="2" max="200" onchange="setProp(${s.id},'w',+this.value)">
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Depth (ft)</div>
+      <input class="prop-value" type="number" value="${Math.round(s.h)}" min="2" max="200" onchange="setProp(${s.id},'h',+this.value)">
+    </div>
+    <div class="prop-row">
+      <div class="prop-label">Rotation (°)</div>
+      <input class="prop-value" type="number" value="${Math.round(s.rot*180/Math.PI)}" min="-180" max="180" onchange="setProp(${s.id},'rot',+this.value*Math.PI/180)">
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#4a4a46;margin-top:4px;">
+      Area: <span style="color:#9a9a90">${Math.round(s.w*s.h)} sq ft</span>
+    </div>`;
+}
+
+function setProp(id, key, val) {
+  const s = getShape(id); if (!s) return;
+  s[key] = val; draw(); updateInfo(s); saveLayout();
+}
+
+function saveLayout() {
+  try { localStorage.setItem('shedLayout_v1', JSON.stringify({shapes,viewOX,viewOY,viewScale,nextId})); } catch(e) {}
+}
+
+function loadLayout() {
+  try {
+    const data = JSON.parse(localStorage.getItem('shedLayout_v1'));
+    if (data) { shapes=data.shapes||[]; viewOX=data.viewOX||0; viewOY=data.viewOY||0; viewScale=data.viewScale||1; nextId=data.nextId||shapes.length+1; }
+  } catch(e) {}
+}
+
+function resetView() {
+  viewScale=1; viewOX=canvas.width/2; viewOY=canvas.height/2; draw(); updateScaleBar();
+}
+
+function clearAll() {
+  if (!confirm('Clear all shapes from the canvas?')) return;
+  shapes=[]; selectedId=null; updateProps(); draw(); saveLayout();
+}
+
+window.addEventListener('resize', resize);
+loadLayout();
+resize();
+
+if (shapes.length === 0) {
+  shapes.push({
+    id: nextId++, type:'pool',
+    x:-10, y:-20, w:20, h:40, rot:0,
+    label:'Pool', color:'#3b82c4', alpha:0.45,
+    dashed:false, outline:false,
+  });
+  draw(); saveLayout();
+}
+</script>
+</body>
+</html>
